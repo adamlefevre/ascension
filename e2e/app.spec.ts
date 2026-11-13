@@ -42,3 +42,20 @@ test("projects show progress and settings can be saved", async ({ page }) => {
   await page.getByRole("button", { name: "Save and re-plan" }).click();
   await expect(page.getByRole("status")).toHaveText("Saved");
 });
+
+test("a guest can book a slot and the owner sees it", async ({ page }) => {
+  await page.goto("/book/intro");
+  await expect(page.getByRole("heading", { name: "Intro call" })).toBeVisible();
+  const firstSlot = page.getByRole("button", { name: /^\d{1,2}:\d{2} (AM|PM)$/ }).first();
+  await firstSlot.click();
+  await page.getByLabel("Your name").fill("Pat Guest");
+  await page.getByLabel("Email").fill("pat@example.com");
+  await page.getByRole("button", { name: "Confirm booking" }).click();
+  await expect(page.getByRole("status")).toContainText("You are booked");
+
+  await page.goto("/settings");
+  await expect(page.getByText("Pat Guest")).toBeVisible();
+
+  const res = await page.request.get("/api/book/missing");
+  expect(res.status()).toBe(404);
+});

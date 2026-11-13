@@ -303,3 +303,47 @@ export async function projectStats() {
   }
   return out;
 }
+
+// ---------- booking links ----------
+
+export const bookingLinkInput = z.object({
+  slug: z.string().trim().toLowerCase().regex(/^[a-z0-9-]{2,40}$/, "Use 2-40 lowercase letters, digits or dashes"),
+  title: z.string().trim().min(1).max(120),
+  durationMinutes: z.number().int().min(10).max(480),
+  bufferMinutes: z.number().int().min(0).max(120).default(10),
+  daysAhead: z.number().int().min(1).max(60).default(14),
+  minNoticeHours: z.number().int().min(0).max(336).default(4),
+  dailyLimit: z.number().int().min(1).max(20).nullish(),
+  active: z.boolean().default(true),
+});
+
+export async function listBookingLinks() {
+  const db = await getDb();
+  return db.select().from(schema.bookingLinks).orderBy(asc(schema.bookingLinks.title));
+}
+
+export async function saveBookingLink(id: string | null, raw: z.input<typeof bookingLinkInput>) {
+  const input = bookingLinkInput.parse(raw);
+  const db = await getDb();
+  const [clash] = await db.select().from(schema.bookingLinks).where(eq(schema.bookingLinks.slug, input.slug));
+  if (clash && clash.id !== id) throw new Error("That link address is already used");
+  const [row] = id
+    ? await db.update(schema.bookingLinks).set(input).where(eq(schema.bookingLinks.id, id)).returning()
+    : await db.insert(schema.bookingLinks).values(input).returning();
+  return row;
+}
+
+export async function deleteBookingLink(id: string) {
+  const db = await getDb();
+  await db.delete(schema.bookingLinks).where(eq(schema.bookingLinks.id, id));
+}
+
+export async function upcomingBookings() {
+  const db = await getDb();
+  return db
+    .select({ booking: schema.bookings, linkTitle: schema.bookingLinks.title })
+    .from(schema.bookings)
+    .innerJoin(schema.bookingLinks, eq(schema.bookings.linkId, schema.bookingLinks.id))
+    .where(gt(schema.bookings.end, new Date()))
+    .orderBy(asc(schema.bookings.start));
+}

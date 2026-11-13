@@ -41,6 +41,9 @@ export const updateSettings = async (input: Parameters<typeof svc.updateSettings
 export const setCalendarBusy = async (id: string, busy: boolean) => act(() => svc.setCalendarBusy(id, busy));
 export const createEvent = async (input: { title: string; start: string; end: string }) => act(() => svc.createEvent(input));
 export const deleteEvent = async (id: string) => act(() => svc.deleteEvent(id));
+export const saveBookingLink = async (id: string | null, input: Parameters<typeof svc.saveBookingLink>[1]) =>
+  act(() => svc.saveBookingLink(id, input));
+export const deleteBookingLink = async (id: string) => act(() => svc.deleteBookingLink(id));
 export const replan = async () => act(async () => void (await reschedule()));
 export const syncNow = async () => act(() => syncAll());
 
