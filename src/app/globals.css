@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-2: #f1f1ee;
+  --border: #e4e4df;
+  --text: #1c1c1a;
+  --muted: #6f6f69;
+  --accent: #4f46e5;
+  --accent-soft: #eceafd;
+  --accent-text: #ffffff;
+  --danger: #c2410c;
+  --danger-soft: #fdeee4;
+  --ok: #15803d;
+  --meeting-bg: #e8eef3;
+  --meeting-text: #29414f;
+  --meeting-border: #9fb6c4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141413;
+    --surface: #1c1c1a;
+    --surface-2: #252523;
+    --border: #33332f;
+    --text: #ededea;
+    --muted: #a1a19a;
+    --accent: #8b85f5;
+    --accent-soft: #2a2850;
+    --accent-text: #14131f;
+    --danger: #fb923c;
+    --danger-soft: #3a2415;
+    --ok: #4ade80;
+    --meeting-bg: #23303a;
+    --meeting-text: #c9dbe6;
+    --meeting-border: #4e6a7a;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ok: var(--ok);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Calendar grid (FullCalendar classic theme) recoloured with our tokens */
+.calendar-host {
+  font-size: 0.8125rem;
+  --fc-classic-primary: var(--accent);
+  --fc-classic-primary-foreground: #fff;
+  --fc-classic-background: var(--surface);
+  --fc-classic-foreground: var(--text);
+  --fc-classic-muted-foreground: var(--muted);
+  --fc-classic-faint-foreground: var(--muted);
+  --fc-classic-border: var(--border);
+  --fc-classic-strong-border: var(--border);
+  --fc-classic-faint: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  --fc-classic-muted: var(--surface-2);
+  --fc-classic-highlight: var(--accent-soft);
+  --fc-classic-today: color-mix(in srgb, var(--accent) 6%, transparent);
+  --fc-classic-now: #e11d48;
+}
+.ev-meeting,
+.ev-block {
+  border-radius: 6px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.ev-meeting {
+  background: var(--meeting-bg) !important;
+  border: 0 !important;
+  border-left: 3px solid var(--meeting-border) !important;
+}
+.ev-meeting .ev-content {
+  color: var(--meeting-text);
+}
+.ev-block .ev-content {
+  color: #fff;
+}
+.ev-done {
+  opacity: 0.45;
+}
+.ev-done .ev-title {
+  text-decoration: line-through;
+}
