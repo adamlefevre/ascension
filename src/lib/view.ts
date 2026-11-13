@@ -1,6 +1,9 @@
 import { connection } from "next/server";
 import type { Project, Task } from "@/db/schema";
 import { requireOwner } from "./auth-guard";
+import { getProvider } from "./calendar";
+import { syncAll } from "./calendar/sync";
+import { getDb, schema } from "@/db/client";
 import * as svc from "./services";
 import { getSettings } from "./settings";
 import { DAY } from "./time";
@@ -17,6 +20,7 @@ export type EventVM = { id: string; title: string; start: Date; end: Date; allDa
 export async function loadBoard() {
   await connection();
   await requireOwner();
+  await firstSync();
   const now = Date.now();
   const from = new Date(now - 21 * DAY);
   const to = new Date(now + 60 * DAY);
@@ -59,3 +63,13 @@ export async function loadBoard() {
 }
 
 export type Board = Awaited<ReturnType<typeof loadBoard>>;
+
+/** Right after Google is connected nothing has been mirrored yet: do it before the first render. */
+async function firstSync() {
+  const provider = await getProvider();
+  if (provider.kind !== "google") return;
+  const db = await getDb();
+  const cals = await db.select({ id: schema.calendars.id }).from(schema.calendars);
+  if (cals.some((c) => !c.id.startsWith("local-"))) return;
+  await syncAll().catch((e) => console.error("first sync failed", e));
+}

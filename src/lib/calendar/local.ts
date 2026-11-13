@@ -22,7 +22,7 @@ export class LocalProvider implements CalendarProvider {
   }
 
   async listEvents() {
-    return { events: [], nextSyncToken: null };
+    return [];
   }
 
   async createEvent(calendarId: string, input: EventInput) {

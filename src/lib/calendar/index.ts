@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, notInArray } from "drizzle-orm";
 import { getDb, schema } from "@/db/client";
 import { LocalProvider } from "./local";
 import type { CalendarProvider } from "./provider";
@@ -21,7 +21,11 @@ export async function getProvider(): Promise<CalendarProvider> {
   return new LocalProvider();
 }
 
-/** Make sure our calendars table reflects the provider, including the Ascension calendar. */
+/**
+ * Bring our calendars table in line with the provider: add new calendars,
+ * drop ones that no longer exist (their mirrored events go with them), and
+ * make sure the Ascension calendar exists.
+ */
 export async function ensureCalendars(provider: CalendarProvider) {
   const db = await getDb();
   const asc = await provider.ensureAscensionCalendar();
@@ -31,18 +35,23 @@ export async function ensureCalendars(provider: CalendarProvider) {
     const isAscension = c.id === asc.id;
     await db
       .insert(schema.calendars)
-      .values({
-        id: c.id,
-        name: c.name,
-        color: c.color,
-        isPrimary: c.isPrimary,
-        isAscension,
-        countsAsBusy: !isAscension,
-      })
+      .values({ id: c.id, name: c.name, color: c.color, isPrimary: c.isPrimary, isAscension, countsAsBusy: !isAscension })
       .onConflictDoUpdate({
         target: schema.calendars.id,
         set: { name: c.name, color: c.color, isPrimary: c.isPrimary, isAscension },
       });
   }
+  await db.delete(schema.calendars).where(notInArray(schema.calendars.id, all.map((c) => c.id)));
   return { ascensionId: asc.id, primaryId: list.find((c) => c.isPrimary)?.id ?? list[0]?.id ?? asc.id };
+}
+
+/** Ids of the Ascension and primary calendars, from our table when known (no provider round trip). */
+export async function calendarIds(provider: CalendarProvider) {
+  const db = await getDb();
+  const rows = await db.select().from(schema.calendars);
+  const mine = rows.filter((r) => r.id.startsWith("local-") === (provider.kind === "local"));
+  const asc = mine.find((r) => r.isAscension);
+  const primary = mine.find((r) => r.isPrimary);
+  if (asc && primary) return { ascensionId: asc.id, primaryId: primary.id };
+  return ensureCalendars(provider);
 }

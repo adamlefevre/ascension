@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
 import type { CalendarRow, Settings } from "@/db/schema";
-import { setCalendarBusy, updateSettings } from "@/lib/actions";
+import { setCalendarBusy, signOut, syncNow, updateSettings } from "@/lib/actions";
 import { clockToMinutes, minutesToClock } from "@/lib/format";
 import { Button, ErrorNote, Field, Input, Select } from "./ui";
 
@@ -148,5 +148,55 @@ export function CalendarList({ calendars }: { calendars: CalendarRow[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+export function GoogleConnection({ email, configured, pushEnabled }: { email: string | null; configured: boolean; pushEnabled: boolean }) {
+  const [pending, start] = useTransition();
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  if (!configured) {
+    return (
+      <p className="text-sm text-muted">
+        Not set up. Add AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_SECRET and ALLOWED_EMAIL (see the README), then sign in.
+        Until then the app keeps its own calendar.
+      </p>
+    );
+  }
+  if (!email) {
+    return (
+      <p className="text-sm text-muted">
+        Not connected. <a className="font-medium text-accent underline" href="/signin">Sign in with Google</a> to sync your calendar.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-3 text-sm">
+      <p>
+        Connected as <span className="font-medium">{email}</span>.{" "}
+        <span className="text-muted">
+          {pushEnabled ? "Changes in Google arrive within moments." : "Changes in Google are picked up once a day, or when you press Sync now."}
+        </span>
+      </p>
+      <ErrorNote message={error} />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              const res = await syncNow();
+              setError(res.ok ? null : res.error);
+              setMessage(res.ok ? (res.data.skipped ?? `Synced ${res.data.events} events from ${res.data.calendars} calendars`) : null);
+            })
+          }
+        >
+          {pending ? "Syncing…" : "Sync now"}
+        </Button>
+        <form action={signOut}>
+          <Button type="submit" variant="ghost">Sign out</Button>
+        </form>
+        {message && <span className="text-muted" role="status">{message}</span>}
+      </div>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, gte, inArray, lt, or } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db/client";
-import { ensureCalendars, getProvider } from "./calendar";
+import { calendarIds, getProvider } from "./calendar";
 import { isValidRule } from "./recurrence";
 import { pushBlocks, reschedule } from "./reschedule";
 import { getSettings } from "./settings";
@@ -147,7 +147,7 @@ export async function moveBlock(id: string, start: Date, end: Date) {
     const [task] = await db.select().from(schema.tasks).where(eq(schema.tasks.id, block.taskId));
     const p = await getProvider();
     if (p.kind !== "local") {
-      const { ascensionId } = await ensureCalendars(p);
+      const { ascensionId } = await calendarIds(p);
       await p
         .updateEvent(ascensionId, block.externalEventId, { title: task.title, start, end, blockId: block.id })
         .catch((e) => console.error("update block event failed", e));
@@ -209,7 +209,7 @@ export const eventInput = z
 export async function createEvent(raw: z.input<typeof eventInput>) {
   const input = eventInput.parse(raw);
   const p = await getProvider();
-  const { primaryId } = await ensureCalendars(p);
+  const { primaryId } = await calendarIds(p);
   const { id } = await p.createEvent(primaryId, input);
   const db = await getDb();
   await db

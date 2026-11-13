@@ -4,11 +4,11 @@ export type ProviderCalendar = { id: string; name: string; color?: string; isPri
 
 export type ProviderEvent = {
   id: string;
-  cancelled: boolean;
   title: string;
   start: Date;
   end: Date;
   allDay: boolean;
+  /** Marked "free" in the calendar, or declined by the owner: does not block time. */
   transparent: boolean;
   /** Set when this event is one of our own task blocks. */
   blockId?: string;
@@ -24,18 +24,18 @@ export type EventInput = {
   withMeetLink?: boolean;
 };
 
-export class SyncTokenExpired extends Error {}
-
 export interface CalendarProvider {
   readonly kind: "google" | "local";
   listCalendars(): Promise<ProviderCalendar[]>;
-  /** Returns the id of the dedicated calendar that holds task blocks, creating it if needed. */
+  /** The dedicated calendar that holds task blocks, created if needed. */
   ensureAscensionCalendar(): Promise<ProviderCalendar>;
-  /** Incremental when syncToken is given. Throws SyncTokenExpired when a full resync is needed. */
-  listEvents(calendarId: string, syncToken: string | null): Promise<{ events: ProviderEvent[]; nextSyncToken: string | null }>;
-  createEvent(calendarId: string, input: EventInput): Promise<{ id: string }>;
+  /** Every event overlapping [from, to), with recurring events expanded. */
+  listEvents(calendarId: string, from: Date, to: Date): Promise<ProviderEvent[]>;
+  createEvent(calendarId: string, input: EventInput): Promise<{ id: string; meetLink?: string }>;
   updateEvent(calendarId: string, eventId: string, input: EventInput): Promise<void>;
+  /** Must succeed when the event is already gone. */
   deleteEvent(calendarId: string, eventId: string): Promise<void>;
+  /** Ask to be notified at webhookUrl when the calendar changes. */
   watch?(calendarId: string, webhookUrl: string, token: string): Promise<{ channelId: string; resourceId: string; expiry: Date }>;
   stopWatch?(channelId: string, resourceId: string): Promise<void>;
 }

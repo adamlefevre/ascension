@@ -1,7 +1,9 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { signOut as authSignOut } from "@/auth";
 import { requireOwner } from "./auth-guard";
+import { syncAll } from "./calendar/sync";
 import { reschedule } from "./reschedule";
 import * as svc from "./services";
 
@@ -37,3 +39,8 @@ export const setCalendarBusy = async (id: string, busy: boolean) => act(() => sv
 export const createEvent = async (input: { title: string; start: string; end: string }) => act(() => svc.createEvent(input));
 export const deleteEvent = async (id: string) => act(() => svc.deleteEvent(id));
 export const replan = async () => act(async () => void (await reschedule()));
+export const syncNow = async () => act(() => syncAll());
+
+export async function signOut() {
+  await authSignOut({ redirectTo: "/signin" });
+}

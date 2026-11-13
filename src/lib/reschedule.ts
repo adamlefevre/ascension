@@ -1,7 +1,7 @@
-import { and, eq, gt, inArray, lt, lte } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, lt } from "drizzle-orm";
 import { getDb, schema } from "@/db/client";
 import type { ScheduleReport } from "@/db/schema";
-import { ensureCalendars, getProvider } from "./calendar";
+import { calendarIds, getProvider } from "./calendar";
 import type { CalendarProvider } from "./calendar/provider";
 import { materializeRecurring } from "./recurrence";
 import { schedule, type ScheduleResult } from "./scheduler/engine";
@@ -130,7 +130,7 @@ export async function pushBlocks(deletedEventIds: string[] = [], provider?: Cale
     const p = provider ?? (await getProvider());
     if (p.kind === "local") return;
     const db = await getDb();
-    const { ascensionId } = await ensureCalendars(p);
+    const { ascensionId } = await calendarIds(p);
 
     for (const id of deletedEventIds) {
       await p.deleteEvent(ascensionId, id).catch((e) => console.error("delete block event failed", e));
@@ -140,9 +140,8 @@ export async function pushBlocks(deletedEventIds: string[] = [], provider?: Cale
       .select({ block: schema.taskBlocks, title: schema.tasks.title, notes: schema.tasks.notes })
       .from(schema.taskBlocks)
       .innerJoin(schema.tasks, eq(schema.taskBlocks.taskId, schema.tasks.id))
-      .where(and(lte(schema.taskBlocks.start, new Date(Date.now() + 60 * DAY))));
+      .where(and(isNull(schema.taskBlocks.externalEventId), gt(schema.taskBlocks.end, new Date()), eq(schema.tasks.status, "todo")));
     for (const { block, title, notes } of pending) {
-      if (block.externalEventId) continue;
       const { id } = await p.createEvent(ascensionId, {
         title,
         description: notes ?? undefined,
