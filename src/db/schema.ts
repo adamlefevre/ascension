@@ -142,7 +142,18 @@ export const bookings = pgTable("bookings", {
 export const chatMessages = pgTable("chat_messages", {
   id: uuid("id").primaryKey().defaultRandom(),
   role: text("role").$type<"user" | "assistant">().notNull(),
-  content: jsonb("content").notNull(), // Anthropic content blocks or plain string
+  content: jsonb("content").notNull(), // Anthropic content blocks
+  createdAt: ts("created_at").notNull().defaultNow(),
+  seq: integer("seq").notNull().default(0), // order within one exchange saved at the same instant
+});
+
+/** Destructive actions the assistant proposed; they run only when the owner confirms in the UI. */
+export const pendingActions = pgTable("pending_actions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tool: text("tool").notNull(),
+  input: jsonb("input").notNull(),
+  summary: text("summary").notNull(),
+  status: text("status").$type<"pending" | "confirmed" | "cancelled">().notNull().default("pending"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 

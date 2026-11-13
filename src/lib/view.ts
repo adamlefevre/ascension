@@ -3,7 +3,9 @@ import type { Project, Task } from "@/db/schema";
 import { requireOwner } from "./auth-guard";
 import { getProvider } from "./calendar";
 import { syncAll } from "./calendar/sync";
+import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db/client";
+import { assistantConfigured, loadTranscript } from "./ai/chat";
 import * as svc from "./services";
 import { getSettings } from "./settings";
 import { DAY } from "./time";
@@ -72,4 +74,16 @@ async function firstSync() {
   const cals = await db.select({ id: schema.calendars.id }).from(schema.calendars);
   if (cals.some((c) => !c.id.startsWith("local-"))) return;
   await syncAll().catch((e) => console.error("first sync failed", e));
+}
+
+/** What the assistant panel needs on first render. */
+export async function loadAssistant() {
+  await connection();
+  await requireOwner();
+  const db = await getDb();
+  const [transcript, pending] = await Promise.all([
+    loadTranscript(),
+    db.select({ id: schema.pendingActions.id, summary: schema.pendingActions.summary }).from(schema.pendingActions).where(eq(schema.pendingActions.status, "pending")),
+  ]);
+  return { configured: assistantConfigured(), transcript, pending };
 }

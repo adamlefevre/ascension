@@ -2,6 +2,9 @@
 
 import { refresh } from "next/cache";
 import { signOut as authSignOut } from "@/auth";
+import { getDb, schema } from "@/db/client";
+import { noteForAssistant } from "./ai/chat";
+import { resolvePendingAction } from "./ai/tools";
 import { requireOwner } from "./auth-guard";
 import { syncAll } from "./calendar/sync";
 import { reschedule } from "./reschedule";
@@ -40,6 +43,21 @@ export const createEvent = async (input: { title: string; start: string; end: st
 export const deleteEvent = async (id: string) => act(() => svc.deleteEvent(id));
 export const replan = async () => act(async () => void (await reschedule()));
 export const syncNow = async () => act(() => syncAll());
+
+/** The owner answered a Confirm / Cancel prompt raised by the assistant. */
+export const resolvePending = async (id: string, confirm: boolean) =>
+  act(async () => {
+    const message = await resolvePendingAction(id, confirm);
+    await noteForAssistant(`The owner pressed ${confirm ? "Confirm" : "Cancel"}. ${message}`);
+    return message;
+  });
+
+export const clearChat = async () =>
+  act(async () => {
+    const db = await getDb();
+    await db.delete(schema.chatMessages);
+    await db.delete(schema.pendingActions);
+  });
 
 export async function signOut() {
   await authSignOut({ redirectTo: "/signin" });
